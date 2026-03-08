@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Twister Ruletas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: radial-gradient(ellipse at top, #131a2e 0%, #07080f 70%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 32px 16px;
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+    }
+
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes shimmer  { 0%{opacity:.6;} 50%{opacity:1;} 100%{opacity:.6;} }
+    @keyframes float    { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
+    @keyframes glowPop  { 0%{filter:brightness(1);} 50%{filter:brightness(1.6);} 100%{filter:brightness(1);} }
+
+    /* ─── HEADER ─── */
+    .header { text-align:center; margin-bottom:40px; animation: fadeUp .6s ease-out; }
+    .header .top-icon { font-size:48px; display:inline-block; animation: float 3s ease-in-out infinite; }
+    .header h1 {
+      font-family:'Bebas Neue',sans-serif;
+      font-size: clamp(56px,13vw,96px);
+      letter-spacing: 10px; line-height:1;
+      background: linear-gradient(120deg,#52b788,#74b3ce,#c9a06a,#e05252);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .header p { color:rgba(255,255,255,.25); font-size:11px; letter-spacing:5px; margin-top:6px; text-transform:uppercase; }
+
+    /* ─── LAYOUT ─── */
+    .wheels { display:flex; flex-wrap:wrap; gap:40px; justify-content:center; width:100%; }
+    .wheel-section { display:flex; flex-direction:column; align-items:center; gap:20px; animation: fadeUp .7s ease-out; }
+
+    /* ─── WHEEL CANVAS WRAPPER ─── */
+    .wheel-wrap {
+      position:relative;
+      width:260px; height:260px;
+    }
+
+    /* Outer glow ring */
+    .wheel-glow {
+      position:absolute; inset:-8px; border-radius:50%;
+      transition: box-shadow .4s;
+    }
+    .wheel-wrap.color-wheel .wheel-glow { box-shadow: 0 0 32px rgba(82,183,136,.3); }
+    .wheel-wrap.limb-wheel  .wheel-glow { box-shadow: 0 0 32px rgba(212,168,67,.3); }
+    .wheel-wrap.spinning .wheel-glow    { animation: shimmer .5s ease-in-out infinite; }
+
+    canvas.wheel-canvas {
+      width:260px; height:260px;
+      border-radius:50%;
+      display:block;
+      filter: drop-shadow(0 4px 24px rgba(0,0,0,.6));
+    }
+
+    /* Center cap */
+    .wheel-cap {
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      width:52px; height:52px; border-radius:50%;
+      background: radial-gradient(circle, #1e2235 60%, #111520);
+      border:3px solid rgba(255,255,255,.15);
+      display:flex; align-items:center; justify-content:center;
+      font-size:22px; z-index:10;
+      box-shadow: 0 2px 12px rgba(0,0,0,.7), inset 0 1px 3px rgba(255,255,255,.1);
+    }
+
+    /* Pointer / marker */
+    .pointer {
+      position:absolute; top:-18px; left:50%;
+      transform:translateX(-50%);
+      width:0; height:0;
+      border-left:14px solid transparent;
+      border-right:14px solid transparent;
+      border-top:28px solid #fff;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,.8));
+      z-index:20;
+    }
+
+    /* ─── RESULT BADGE ─── */
+    .result-badge {
+      min-height:52px;
+      display:flex; align-items:center; justify-content:center;
+      padding:10px 24px;
+      border-radius:50px;
+      border:1.5px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.05);
+      font-family:'Bebas Neue',sans-serif;
+      font-size:22px; letter-spacing:3px;
+      color:rgba(255,255,255,.25);
+      transition: all .4s;
+      min-width:220px;
+    }
+    .result-badge.has-result {
+      background:rgba(255,255,255,.08);
+      color:#fff;
+      animation: glowPop .5s ease-out;
+    }
+
+    /* ─── BUTTON ─── */
+    .spin-btn {
+      padding:13px 36px; border:none; border-radius:50px;
+      font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:4px;
+      cursor:pointer; transition:all .25s; color:#fff;
+      text-shadow:0 1px 4px rgba(0,0,0,.4);
+    }
+    .spin-btn:disabled { background:rgba(255,255,255,.07)!important; color:rgba(255,255,255,.25)!important; cursor:not-allowed; box-shadow:none!important; }
+    .btn-green { background:linear-gradient(135deg,#52b788,#1e7a50); box-shadow:0 4px 20px rgba(52,183,136,.35); }
+    .btn-green:not(:disabled):hover { background:linear-gradient(135deg,#6dcfa0,#2a9460); transform:translateY(-2px); }
+    .btn-gold  { background:linear-gradient(135deg,#d4a843,#a07020); box-shadow:0 4px 20px rgba(212,168,67,.35); }
+    .btn-gold:not(:disabled):hover  { background:linear-gradient(135deg,#e8bc58,#b88030); transform:translateY(-2px); }
+
+    /* ─── COMBINED ─── */
+    #combined {
+      display:none;
+      margin-top:32px;
+      background: linear-gradient(135deg,rgba(82,183,136,.1),rgba(212,168,67,.1));
+      border:1.5px solid rgba(255,255,255,.15);
+      border-radius:24px;
+      padding:22px 36px;
+      text-align:center;
+      animation: fadeUp .5s ease-out;
+      max-width:500px; width:100%;
+    }
+    #combined p { font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:5px; color:rgba(255,255,255,.3); margin-bottom:10px; }
+    #combined-text {
+      font-family:'Bebas Neue',sans-serif;
+      font-size:clamp(22px,5vw,32px); letter-spacing:3px;
+      display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap;
+      animation: float 2.5s ease-in-out infinite;
+    }
+    #combined-sep { color:rgba(255,255,255,.2); }
+
+    footer { margin-top:40px; color:rgba(255,255,255,.12); font-size:10px; letter-spacing:4px; text-transform:uppercase; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="top-icon">🌀</div>
+  <h1>TWISTER</h1>
+  <p>Gira las ruletas y muévete</p>
+</div>
+
+<div class="wheels">
+
+  <!-- COLOR WHEEL -->
+  <div class="wheel-section">
+    <div class="wheel-wrap color-wheel" id="wrap-color">
+      <div class="wheel-glow"></div>
+      <div class="pointer"></div>
+      <canvas class="wheel-canvas" id="canvas-color" width="520" height="520"></canvas>
+      <div class="wheel-cap" id="cap-color">🎨</div>
+    </div>
+    <div class="result-badge" id="badge-color">PRESIONA GIRAR</div>
+    <button class="spin-btn btn-green" id="btn-color" onclick="spin('color')">🎨 GIRAR COLOR</button>
+  </div>
+
+  <!-- LIMB WHEEL -->
+  <div class="wheel-section">
+    <div class="wheel-wrap limb-wheel" id="wrap-limb">
+      <div class="wheel-glow"></div>
+      <div class="pointer"></div>
+      <canvas class="wheel-canvas" id="canvas-limb" width="520" height="520"></canvas>
+      <div class="wheel-cap" id="cap-limb">🦾</div>
+    </div>
+    <div class="result-badge" id="badge-limb">PRESIONA GIRAR</div>
+    <button class="spin-btn btn-gold" id="btn-limb" onclick="spin('limb')">🦾 GIRAR EXTREMIDAD</button>
+  </div>
+
+</div>
+
+<!-- COMBINED -->
+<div id="combined">
+  <p>¡TU MOVIMIENTO!</p>
+  <div id="combined-text">
+    <span id="combined-color"></span>
+    <span id="combined-sep">✦</span>
+    <span id="combined-limb"></span>
+  </div>
+</div>
+
+<footer>¡A moverse! 🎉</footer>
+
+<script>
+  /* ── DATA ── */
+  const COLORS = [
+    { name:"VERDE",  fill:"#1b4332", text:"#b7e4c7", arc:"#52b788" },
+    { name:"AZUL",   fill:"#1d3557", text:"#a8d8f0", arc:"#74b3ce" },
+    { name:"MARRÓN", fill:"#5c3317", text:"#f0d9b5", arc:"#c9a06a" },
+  ];
+  const LIMBS = [
+    { name:"MANO DER.",  icon:"🤚", fill:"#0f2a38", text:"#ffd166", arc:"#ffd166" },
+    { name:"MANO IZQ.",  icon:"🖐", fill:"#1a1030", text:"#ffd166", arc:"#ffd166" },
+    { name:"PIE DER.",   icon:"🦶", fill:"#0f2a38", text:"#ffd166", arc:"#ffd166" },
+    { name:"PIE IZQ.",   icon:"🦵", fill:"#1a1030", text:"#ffd166", arc:"#ffd166" },
+  ];
+
+  const FULL_NAMES = {
+    "MANO DER.":"MANO DERECHA", "MANO IZQ.":"MANO IZQUIERDA",
+    "PIE DER.":"PIE DERECHO",   "PIE IZQ.":"PIE IZQUIERDO"
+  };
+
+  /* ── STATE ── */
+  const state = {
+    color: { spinning:false, angle:0, result:null },
+    limb:  { spinning:false, angle:0, result:null }
+  };
+
+  /* ── DRAW WHEEL ── */
+  function drawWheel(id, items, angle) {
+    const canvas = document.getElementById('canvas-' + id);
+    const ctx    = canvas.getContext('2d');
+    const cx = 260, cy = 260, r = 248, ir = 52;
+    const n   = items.length;
+    const arc = (2 * Math.PI) / n;
+
+    ctx.clearRect(0, 0, 520, 520);
+
+    items.forEach((item, i) => {
+      const start = angle + i * arc - Math.PI / 2;
+      const end   = start + arc;
+
+      // Slice fill
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, end);
+      ctx.closePath();
+      ctx.fillStyle = item.fill;
+      ctx.fill();
+
+      // Slice border
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, end);
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(0,0,0,.55)';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // Colored arc band near edge
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 20, start + 0.04, end - 0.04);
+      ctx.strokeStyle = item.arc;
+      ctx.lineWidth = 14;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Text in middle of slice
+      const mid = start + arc / 2;
+      const dist = r * 0.58;
+      const tx  = cx + dist * Math.cos(mid);
+      const ty  = cy + dist * Math.sin(mid);
+
+      ctx.save();
+      ctx.translate(tx, ty);
+      ctx.rotate(mid + Math.PI / 2);
+
+      // Shadow
+      ctx.shadowColor = 'rgba(0,0,0,.9)';
+      ctx.shadowBlur  = 8;
+
+      // Icon
+      if (item.icon) {
+        ctx.font = '34px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(item.icon, 0, -20);
+      }
+
+      // Label
+      ctx.font = 'bold 28px "Bebas Neue", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = item.text;
+      ctx.fillText(item.name, 0, item.icon ? 16 : 0);
+
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    });
+
+    // Inner circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, ir, 0, 2 * Math.PI);
+    const grad = ctx.createRadialGradient(cx, cy-10, 4, cx, cy, ir);
+    grad.addColorStop(0, '#2a3050');
+    grad.addColorStop(1, '#0f1220');
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.18)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Outer ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+    ctx.strokeStyle = 'rgba(255,255,255,.1)';
+    ctx.lineWidth = 5;
+    ctx.stroke();
+  }
+
+  /* ── INITIAL DRAW ── */
+  drawWheel('color', COLORS, 0);
+  drawWheel('limb',  LIMBS,  0);
+
+  /* ── SPIN ── */
+  function spin(id) {
+    const s = state[id];
+    if (s.spinning) return;
+    s.spinning = true;
+    s.result   = null;
+
+    const items = id === 'color' ? COLORS : LIMBS;
+    const btn   = document.getElementById('btn-' + id);
+    const badge = document.getElementById('badge-' + id);
+    const wrap  = document.getElementById('wrap-' + id);
+
+    btn.disabled = true;
+    btn.textContent = '⏳ GIRANDO...';
+    badge.className = 'result-badge';
+    badge.textContent = 'GIRANDO...';
+    badge.removeAttribute('style');
+    wrap.classList.add('spinning');
+    document.getElementById('combined').style.display = 'none';
+
+    // Pick winner
+    const winner   = Math.floor(Math.random() * items.length);
+    const n        = items.length;
+    const sliceArc = 2 * Math.PI / n;
+
+    // Target: winner slice center at top (pointer)
+    const targetAngle  = -(winner * sliceArc + sliceArc / 2);
+    const spins        = 8 + Math.random() * 4;
+    const finalAngle   = targetAngle - spins * 2 * Math.PI;
+    const startAngle   = s.angle;
+    const duration     = 3000;
+    const startTime    = performance.now();
+
+    function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
+
+    function animate(now) {
+      const elapsed = now - startTime;
+      const t       = Math.min(elapsed / duration, 1);
+      const current = startAngle + (finalAngle - startAngle) * easeOut(t);
+      s.angle = current;
+      drawWheel(id, items, current);
+
+      if (t < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        s.spinning = false;
+        s.result   = items[winner];
+        wrap.classList.remove('spinning');
+
+        const fullName = FULL_NAMES[s.result.name] || s.result.name;
+        const icon     = s.result.icon ? s.result.icon + ' ' : '';
+        badge.textContent = icon + fullName;
+        badge.className   = 'result-badge has-result';
+
+        if (id === 'color') {
+          badge.style.cssText = `color:${s.result.arc};border-color:${s.result.arc}55;background:${s.result.fill};`;
+        } else {
+          badge.style.cssText = `color:#ffd166;border-color:rgba(255,209,102,.3);background:rgba(255,209,102,.07);`;
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = id === 'color' ? '🎨 GIRAR COLOR' : '🦾 GIRAR EXTREMIDAD';
+
+        updateCombined();
+      }
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  function updateCombined() {
+    const cr = state.color.result;
+    const lr = state.limb.result;
+    if (!cr || !lr) return;
+
+    const cEl = document.getElementById('combined-color');
+    const lEl = document.getElementById('combined-limb');
+    const el  = document.getElementById('combined');
+
+    cEl.textContent  = cr.name;
+    cEl.style.cssText= `color:${cr.arc};text-shadow:0 0 16px ${cr.arc}66;`;
+
+    const fullLimb   = FULL_NAMES[lr.name] || lr.name;
+    lEl.textContent  = lr.icon + ' ' + fullLimb;
+    lEl.style.cssText= 'color:#ffd166;text-shadow:0 0 16px rgba(255,209,102,.4);';
+
+    el.style.display = 'block';
+  }
+</script>
+</body>
+</html>
