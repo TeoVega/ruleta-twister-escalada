@@ -1,0 +1,1 @@
+ruleta para escalada
