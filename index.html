@@ -6,140 +6,109 @@
   <title>Twister Ruletas</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet"/>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
     body {
-      min-height: 100vh;
+      min-height:100vh;
       background: radial-gradient(ellipse at top, #131a2e 0%, #07080f 70%);
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 32px 16px;
-      font-family: 'DM Sans', sans-serif;
-      overflow-x: hidden;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:32px 16px; font-family:'DM Sans',sans-serif; overflow-x:hidden;
     }
+    @keyframes fadeUp  { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+    @keyframes float   { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
+    @keyframes shimmer { 0%,100%{opacity:.5;} 50%{opacity:1;} }
+    @keyframes glowPop { 0%{filter:brightness(1);} 40%{filter:brightness(1.7);} 100%{filter:brightness(1);} }
+    @keyframes popIn   { 0%{transform:scale(.7);opacity:0;} 100%{transform:scale(1);opacity:1;} }
 
-    @keyframes fadeUp   { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes shimmer  { 0%{opacity:.6;} 50%{opacity:1;} 100%{opacity:.6;} }
-    @keyframes float    { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
-    @keyframes glowPop  { 0%{filter:brightness(1);} 50%{filter:brightness(1.6);} 100%{filter:brightness(1);} }
-
-    /* ─── HEADER ─── */
-    .header { text-align:center; margin-bottom:40px; animation: fadeUp .6s ease-out; }
-    .header .top-icon { font-size:48px; display:inline-block; animation: float 3s ease-in-out infinite; }
+    .header { text-align:center; margin-bottom:36px; animation:fadeUp .6s ease-out; }
+    .header .top-icon { font-size:46px; display:inline-block; animation:float 3s ease-in-out infinite; }
     .header h1 {
       font-family:'Bebas Neue',sans-serif;
-      font-size: clamp(56px,13vw,96px);
-      letter-spacing: 10px; line-height:1;
-      background: linear-gradient(120deg,#52b788,#74b3ce,#c9a06a,#e05252);
+      font-size:clamp(54px,13vw,92px); letter-spacing:10px; line-height:1;
+      background:linear-gradient(120deg,#52b788,#74b3ce,#c9a06a,#e05252);
       -webkit-background-clip:text; -webkit-text-fill-color:transparent;
     }
-    .header p { color:rgba(255,255,255,.25); font-size:11px; letter-spacing:5px; margin-top:6px; text-transform:uppercase; }
+    .header p { color:rgba(255,255,255,.22); font-size:11px; letter-spacing:5px; margin-top:6px; text-transform:uppercase; }
 
-    /* ─── LAYOUT ─── */
-    .wheels { display:flex; flex-wrap:wrap; gap:40px; justify-content:center; width:100%; }
-    .wheel-section { display:flex; flex-direction:column; align-items:center; gap:20px; animation: fadeUp .7s ease-out; }
+    .wheels { display:flex; flex-wrap:wrap; gap:36px; justify-content:center; width:100%; }
+    .wheel-section { display:flex; flex-direction:column; align-items:center; gap:16px; animation:fadeUp .7s ease-out; }
+    .wheel-label { font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:5px; color:rgba(255,255,255,.35); text-transform:uppercase; }
 
-    /* ─── WHEEL CANVAS WRAPPER ─── */
-    .wheel-wrap {
-      position:relative;
-      width:260px; height:260px;
-    }
+    /* Wheel wrapper */
+    .wheel-wrap { position:relative; width:260px; height:260px; }
+    .wheel-glow  { position:absolute; inset:-10px; border-radius:50%; transition:box-shadow .4s; }
+    .color-wheel .wheel-glow { box-shadow:0 0 28px rgba(82,183,136,.25); }
+    .limb-wheel  .wheel-glow { box-shadow:0 0 28px rgba(212,168,67,.25); }
+    .wheel-wrap.spinning .wheel-glow { animation:shimmer .4s ease-in-out infinite; }
+    .color-wheel.spinning .wheel-glow { box-shadow:0 0 48px rgba(82,183,136,.5); }
+    .limb-wheel.spinning  .wheel-glow { box-shadow:0 0 48px rgba(212,168,67,.5); }
 
-    /* Outer glow ring */
-    .wheel-glow {
-      position:absolute; inset:-8px; border-radius:50%;
-      transition: box-shadow .4s;
-    }
-    .wheel-wrap.color-wheel .wheel-glow { box-shadow: 0 0 32px rgba(82,183,136,.3); }
-    .wheel-wrap.limb-wheel  .wheel-glow { box-shadow: 0 0 32px rgba(212,168,67,.3); }
-    .wheel-wrap.spinning .wheel-glow    { animation: shimmer .5s ease-in-out infinite; }
+    canvas.wheel-canvas { width:260px; height:260px; border-radius:50%; display:block; filter:drop-shadow(0 6px 28px rgba(0,0,0,.7)); }
 
-    canvas.wheel-canvas {
-      width:260px; height:260px;
-      border-radius:50%;
-      display:block;
-      filter: drop-shadow(0 4px 24px rgba(0,0,0,.6));
-    }
-
-    /* Center cap */
     .wheel-cap {
-      position:absolute; top:50%; left:50%;
-      transform:translate(-50%,-50%);
-      width:52px; height:52px; border-radius:50%;
-      background: radial-gradient(circle, #1e2235 60%, #111520);
-      border:3px solid rgba(255,255,255,.15);
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      width:50px; height:50px; border-radius:50%;
+      background:radial-gradient(circle,#1e2235 60%,#0f1220);
+      border:3px solid rgba(255,255,255,.18);
       display:flex; align-items:center; justify-content:center;
-      font-size:22px; z-index:10;
-      box-shadow: 0 2px 12px rgba(0,0,0,.7), inset 0 1px 3px rgba(255,255,255,.1);
+      font-size:20px; z-index:10;
+      box-shadow:0 2px 14px rgba(0,0,0,.8), inset 0 1px 3px rgba(255,255,255,.1);
     }
 
-    /* Pointer / marker */
+    /* Pointer */
     .pointer {
-      position:absolute; top:-18px; left:50%;
-      transform:translateX(-50%);
-      width:0; height:0;
-      border-left:14px solid transparent;
-      border-right:14px solid transparent;
-      border-top:28px solid #fff;
-      filter: drop-shadow(0 2px 6px rgba(0,0,0,.8));
-      z-index:20;
+      position:absolute; top:-14px; left:50%; transform:translateX(-50%);
+      z-index:20; filter:drop-shadow(0 2px 5px rgba(0,0,0,.9));
     }
+    .pointer svg { display:block; }
 
-    /* ─── RESULT BADGE ─── */
+    /* Result badge */
     .result-badge {
-      min-height:52px;
+      min-height:50px; min-width:220px;
       display:flex; align-items:center; justify-content:center;
-      padding:10px 24px;
-      border-radius:50px;
-      border:1.5px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.05);
-      font-family:'Bebas Neue',sans-serif;
-      font-size:22px; letter-spacing:3px;
-      color:rgba(255,255,255,.25);
-      transition: all .4s;
-      min-width:220px;
+      padding:10px 24px; border-radius:50px;
+      border:1.5px solid rgba(255,255,255,.1);
+      background:rgba(255,255,255,.04);
+      font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:3px;
+      color:rgba(255,255,255,.22); transition:all .3s;
     }
-    .result-badge.has-result {
-      background:rgba(255,255,255,.08);
-      color:#fff;
-      animation: glowPop .5s ease-out;
+    .result-badge.active {
+      color:#fff; background:rgba(255,255,255,.07);
+      animation:glowPop .5s ease-out, popIn .35s cubic-bezier(.34,1.56,.64,1);
     }
 
-    /* ─── BUTTON ─── */
+    /* Single spin button */
     .spin-btn {
-      padding:13px 36px; border:none; border-radius:50px;
-      font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:4px;
-      cursor:pointer; transition:all .25s; color:#fff;
-      text-shadow:0 1px 4px rgba(0,0,0,.4);
+      margin-top:8px; padding:16px 56px; border:none; border-radius:50px;
+      font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:5px;
+      cursor:pointer; color:#fff; transition:all .25s;
+      background:linear-gradient(135deg,#52b788 0%,#2a7a50 50%,#d4a843 100%);
+      box-shadow:0 6px 28px rgba(0,0,0,.5);
+      text-shadow:0 1px 4px rgba(0,0,0,.5);
     }
-    .spin-btn:disabled { background:rgba(255,255,255,.07)!important; color:rgba(255,255,255,.25)!important; cursor:not-allowed; box-shadow:none!important; }
-    .btn-green { background:linear-gradient(135deg,#52b788,#1e7a50); box-shadow:0 4px 20px rgba(52,183,136,.35); }
-    .btn-green:not(:disabled):hover { background:linear-gradient(135deg,#6dcfa0,#2a9460); transform:translateY(-2px); }
-    .btn-gold  { background:linear-gradient(135deg,#d4a843,#a07020); box-shadow:0 4px 20px rgba(212,168,67,.35); }
-    .btn-gold:not(:disabled):hover  { background:linear-gradient(135deg,#e8bc58,#b88030); transform:translateY(-2px); }
+    .spin-btn:not(:disabled):hover { transform:translateY(-3px); box-shadow:0 10px 36px rgba(0,0,0,.6); }
+    .spin-btn:disabled {
+      background:rgba(255,255,255,.07)!important;
+      color:rgba(255,255,255,.25)!important;
+      cursor:not-allowed; box-shadow:none!important; transform:none!important;
+    }
 
-    /* ─── COMBINED ─── */
+    /* Combined result */
     #combined {
-      display:none;
-      margin-top:32px;
-      background: linear-gradient(135deg,rgba(82,183,136,.1),rgba(212,168,67,.1));
-      border:1.5px solid rgba(255,255,255,.15);
-      border-radius:24px;
-      padding:22px 36px;
-      text-align:center;
-      animation: fadeUp .5s ease-out;
-      max-width:500px; width:100%;
+      display:none; margin-top:28px;
+      background:linear-gradient(135deg,rgba(82,183,136,.1),rgba(212,168,67,.1));
+      border:1.5px solid rgba(255,255,255,.14); border-radius:24px;
+      padding:20px 36px; text-align:center;
+      animation:fadeUp .5s ease-out; max-width:520px; width:100%;
     }
-    #combined p { font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:5px; color:rgba(255,255,255,.3); margin-bottom:10px; }
+    #combined p { font-family:'Bebas Neue',sans-serif; font-size:11px; letter-spacing:5px; color:rgba(255,255,255,.28); margin-bottom:10px; }
     #combined-text {
-      font-family:'Bebas Neue',sans-serif;
-      font-size:clamp(22px,5vw,32px); letter-spacing:3px;
+      font-family:'Bebas Neue',sans-serif; font-size:clamp(20px,5vw,30px); letter-spacing:3px;
       display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap;
-      animation: float 2.5s ease-in-out infinite;
+      animation:float 2.5s ease-in-out infinite;
     }
-    #combined-sep { color:rgba(255,255,255,.2); }
+    #combined-sep { color:rgba(255,255,255,.18); }
 
-    footer { margin-top:40px; color:rgba(255,255,255,.12); font-size:10px; letter-spacing:4px; text-transform:uppercase; }
+    footer { margin-top:36px; color:rgba(255,255,255,.1); font-size:10px; letter-spacing:4px; text-transform:uppercase; }
   </style>
 </head>
 <body>
@@ -151,34 +120,43 @@
 </div>
 
 <div class="wheels">
-
-  <!-- COLOR WHEEL -->
+  <!-- COLOR -->
   <div class="wheel-section">
+    <div class="wheel-label">🎨 Colores</div>
     <div class="wheel-wrap color-wheel" id="wrap-color">
       <div class="wheel-glow"></div>
-      <div class="pointer"></div>
+      <div class="pointer">
+        <svg width="28" height="32" viewBox="0 0 28 32">
+          <polygon points="14,2 26,30 14,24 2,30" fill="white" stroke="rgba(0,0,0,.4)" stroke-width="1.5"/>
+        </svg>
+      </div>
       <canvas class="wheel-canvas" id="canvas-color" width="520" height="520"></canvas>
-      <div class="wheel-cap" id="cap-color">🎨</div>
+      <div class="wheel-cap">🎨</div>
     </div>
-    <div class="result-badge" id="badge-color">PRESIONA GIRAR</div>
-    <button class="spin-btn btn-green" id="btn-color" onclick="spin('color')">🎨 GIRAR COLOR</button>
+    <div class="result-badge" id="badge-color">— — —</div>
   </div>
 
-  <!-- LIMB WHEEL -->
+  <!-- LIMB -->
   <div class="wheel-section">
+    <div class="wheel-label">🤚 Extremidades</div>
     <div class="wheel-wrap limb-wheel" id="wrap-limb">
       <div class="wheel-glow"></div>
-      <div class="pointer"></div>
+      <div class="pointer">
+        <svg width="28" height="32" viewBox="0 0 28 32">
+          <polygon points="14,2 26,30 14,24 2,30" fill="white" stroke="rgba(0,0,0,.4)" stroke-width="1.5"/>
+        </svg>
+      </div>
       <canvas class="wheel-canvas" id="canvas-limb" width="520" height="520"></canvas>
-      <div class="wheel-cap" id="cap-limb">🦾</div>
+      <div class="wheel-cap">🦾</div>
     </div>
-    <div class="result-badge" id="badge-limb">PRESIONA GIRAR</div>
-    <button class="spin-btn btn-gold" id="btn-limb" onclick="spin('limb')">🦾 GIRAR EXTREMIDAD</button>
+    <div class="result-badge" id="badge-limb">— — —</div>
   </div>
-
 </div>
 
-<!-- COMBINED -->
+<!-- Single button -->
+<button class="spin-btn" id="spin-btn" onclick="spinBoth()">🎲 GIRAR AMBAS</button>
+
+<!-- Combined -->
 <div id="combined">
   <p>¡TU MOVIMIENTO!</p>
   <div id="combined-text">
@@ -191,214 +169,272 @@
 <footer>¡A moverse! 🎉</footer>
 
 <script>
-  /* ── DATA ── */
-  const COLORS = [
-    { name:"VERDE",  fill:"#1b4332", text:"#b7e4c7", arc:"#52b788" },
-    { name:"AZUL",   fill:"#1d3557", text:"#a8d8f0", arc:"#74b3ce" },
-    { name:"MARRÓN", fill:"#5c3317", text:"#f0d9b5", arc:"#c9a06a" },
-  ];
-  const LIMBS = [
-    { name:"MANO DER.",  icon:"🤚", fill:"#0f2a38", text:"#ffd166", arc:"#ffd166" },
-    { name:"MANO IZQ.",  icon:"🖐", fill:"#1a1030", text:"#ffd166", arc:"#ffd166" },
-    { name:"PIE DER.",   icon:"🦶", fill:"#0f2a38", text:"#ffd166", arc:"#ffd166" },
-    { name:"PIE IZQ.",   icon:"🦵", fill:"#1a1030", text:"#ffd166", arc:"#ffd166" },
-  ];
+/* ─────────────────────────────────────────────
+   DATA
+───────────────────────────────────────────── */
+const COLORS = [
+  { name:"VERDE",  fill:"#1b4332", text:"#b7e4c7", arc:"#52b788" },
+  { name:"AZUL",   fill:"#1a3050", text:"#a8d8f0", arc:"#74b3ce" },
+  { name:"MARRÓN", fill:"#5c3317", text:"#f0d9b5", arc:"#c9a06a" },
+];
+const LIMBS = [
+  { name:"MANO DER.",  icon:"🤚", fill:"#0f2030", text:"#ffeaa0", arc:"#ffd166" },
+  { name:"MANO IZQ.",  icon:"🖐",  fill:"#1a1030", text:"#ffeaa0", arc:"#ffd166" },
+  { name:"PIE DER.",   icon:"🦶", fill:"#0f2030", text:"#ffeaa0", arc:"#ffd166" },
+  { name:"PIE IZQ.",   icon:"🦵", fill:"#1a1030", text:"#ffeaa0", arc:"#ffd166" },
+];
+const FULL = {
+  "MANO DER.":"MANO DERECHA", "MANO IZQ.":"MANO IZQUIERDA",
+  "PIE DER.":"PIE DERECHO",   "PIE IZQ.":"PIE IZQUIERDO"
+};
 
-  const FULL_NAMES = {
-    "MANO DER.":"MANO DERECHA", "MANO IZQ.":"MANO IZQUIERDA",
-    "PIE DER.":"PIE DERECHO",   "PIE IZQ.":"PIE IZQUIERDO"
-  };
+/* ─────────────────────────────────────────────
+   DRAW  (pure function – no state)
+   angle: current rotation of the wheel (radians)
+   The pointer is at the TOP of the canvas.
+   Slice 0 starts at angle - π/2 on the canvas arc.
+───────────────────────────────────────────── */
+function drawWheel(canvasId, items, angle) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const cx = 260, cy = 260, R = 248, ir = 52;
+  const n = items.length;
+  const sliceArc = (2 * Math.PI) / n;
 
-  /* ── STATE ── */
-  const state = {
-    color: { spinning:false, angle:0, result:null },
-    limb:  { spinning:false, angle:0, result:null }
-  };
+  ctx.clearRect(0, 0, 520, 520);
 
-  /* ── DRAW WHEEL ── */
-  function drawWheel(id, items, angle) {
-    const canvas = document.getElementById('canvas-' + id);
-    const ctx    = canvas.getContext('2d');
-    const cx = 260, cy = 260, r = 248, ir = 52;
-    const n   = items.length;
-    const arc = (2 * Math.PI) / n;
+  for (let i = 0; i < n; i++) {
+    const item   = items[i];
+    // Slice i center is at (angle + i*sliceArc); slice spans ±sliceArc/2 around that
+    const center = angle + i * sliceArc;
+    const start  = center - sliceArc / 2;
+    const end    = center + sliceArc / 2;
 
-    ctx.clearRect(0, 0, 520, 520);
-
-    items.forEach((item, i) => {
-      const start = angle + i * arc - Math.PI / 2;
-      const end   = start + arc;
-
-      // Slice fill
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, start, end);
-      ctx.closePath();
-      ctx.fillStyle = item.fill;
-      ctx.fill();
-
-      // Slice border
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, start, end);
-      ctx.closePath();
-      ctx.strokeStyle = 'rgba(0,0,0,.55)';
-      ctx.lineWidth = 4;
-      ctx.stroke();
-
-      // Colored arc band near edge
-      ctx.beginPath();
-      ctx.arc(cx, cy, r - 20, start + 0.04, end - 0.04);
-      ctx.strokeStyle = item.arc;
-      ctx.lineWidth = 14;
-      ctx.lineCap = 'round';
-      ctx.stroke();
-
-      // Text in middle of slice
-      const mid = start + arc / 2;
-      const dist = r * 0.58;
-      const tx  = cx + dist * Math.cos(mid);
-      const ty  = cy + dist * Math.sin(mid);
-
-      ctx.save();
-      ctx.translate(tx, ty);
-      ctx.rotate(mid + Math.PI / 2);
-
-      // Shadow
-      ctx.shadowColor = 'rgba(0,0,0,.9)';
-      ctx.shadowBlur  = 8;
-
-      // Icon
-      if (item.icon) {
-        ctx.font = '34px serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(item.icon, 0, -20);
-      }
-
-      // Label
-      ctx.font = 'bold 28px "Bebas Neue", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = item.text;
-      ctx.fillText(item.name, 0, item.icon ? 16 : 0);
-
-      ctx.shadowBlur = 0;
-      ctx.restore();
-    });
-
-    // Inner circle
+    // Filled wedge
     ctx.beginPath();
-    ctx.arc(cx, cy, ir, 0, 2 * Math.PI);
-    const grad = ctx.createRadialGradient(cx, cy-10, 4, cx, cy, ir);
-    grad.addColorStop(0, '#2a3050');
-    grad.addColorStop(1, '#0f1220');
-    ctx.fillStyle = grad;
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, R, start, end);
+    ctx.closePath();
+    ctx.fillStyle = item.fill;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,.18)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(0,0,0,.5)';
+    ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Outer ring
+    // Color band near edge
     ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-    ctx.strokeStyle = 'rgba(255,255,255,.1)';
-    ctx.lineWidth = 5;
+    ctx.arc(cx, cy, R - 22, start + 0.05, end - 0.05);
+    ctx.strokeStyle = item.arc;
+    ctx.lineWidth = 16;
+    ctx.lineCap = 'round';
     ctx.stroke();
+
+    // Text at slice center
+    const mid = center;
+    const tx  = cx + R * 0.56 * Math.cos(mid);
+    const ty  = cy + R * 0.56 * Math.sin(mid);
+    ctx.save();
+    ctx.translate(tx, ty);
+    ctx.rotate(mid + Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,.95)';
+    ctx.shadowBlur  = 8;
+
+    if (item.icon) {
+      ctx.font = '32px serif';
+      ctx.fillText(item.icon, 0, -20);
+    }
+    ctx.font = 'bold 26px "Bebas Neue", sans-serif';
+    ctx.fillStyle = item.text;
+    ctx.fillText(item.name, 0, item.icon ? 14 : 0);
+    ctx.shadowBlur = 0;
+    ctx.restore();
   }
 
-  /* ── INITIAL DRAW ── */
-  drawWheel('color', COLORS, 0);
-  drawWheel('limb',  LIMBS,  0);
+  // Inner hub
+  ctx.beginPath();
+  ctx.arc(cx, cy, ir, 0, 2 * Math.PI);
+  const hub = ctx.createRadialGradient(cx, cy - 8, 2, cx, cy, ir);
+  hub.addColorStop(0, '#2a3050');
+  hub.addColorStop(1, '#0f1220');
+  ctx.fillStyle = hub;
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.18)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
 
-  /* ── SPIN ── */
-  function spin(id) {
-    const s = state[id];
-    if (s.spinning) return;
-    s.spinning = true;
-    s.result   = null;
+  // Outer ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(255,255,255,.1)';
+  ctx.lineWidth = 5;
+  ctx.stroke();
+}
 
-    const items = id === 'color' ? COLORS : LIMBS;
-    const btn   = document.getElementById('btn-' + id);
-    const badge = document.getElementById('badge-' + id);
-    const wrap  = document.getElementById('wrap-' + id);
+/* ─────────────────────────────────────────────
+   EASING
+───────────────────────────────────────────── */
+function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
 
-    btn.disabled = true;
-    btn.textContent = '⏳ GIRANDO...';
-    badge.className = 'result-badge';
-    badge.textContent = 'GIRANDO...';
-    badge.removeAttribute('style');
+/* ─────────────────────────────────────────────
+   SPIN ONE WHEEL
+   
+   HOW THE MATH WORKS:
+   - drawWheel draws slice i with its CENTER at canvas angle:
+       (rotationAngle) + i*sliceArc   (before the -π/2 offset in draw)
+   - The pointer sits at the TOP of the wheel = canvas angle -π/2
+   - So for winner slice center to be at the pointer we need:
+       rotationAngle + winner*sliceArc = -π/2  (mod 2π)
+       rotationAngle = -π/2 - winner*sliceArc
+   - We always start from rotationAngle = 0, so we ADD full spins
+     (multiples of 2π don't change appearance) and spin CW (negative direction):
+       finalAngle = -(fullSpins*2π + π/2 + winner*sliceArc)
+───────────────────────────────────────────── */
+function drawWinnerHighlight(canvasId, n, offset) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const cx = 260, cy = 260, R = 248;
+  const sliceArc = (2 * Math.PI) / n;
+
+  // Winner center is at exactly -PI/2 + offset (where the wheel actually stopped)
+  const center = -Math.PI / 2 + offset;
+  const start  = center - sliceArc / 2 + 0.05;
+  const end    = center + sliceArc / 2 - 0.05;
+
+  // Outer glow sweep
+  ctx.beginPath();
+  ctx.arc(cx, cy, R - 6, start, end);
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 22;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Bright white inner arc
+  ctx.beginPath();
+  ctx.arc(cx, cy, R - 6, start, end);
+  ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+  ctx.lineWidth = 7;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Wedge outline
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, R, start, end);
+  ctx.closePath();
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+function spinWheel(canvasId, wrapId, items, duration) {
+  /*
+    MATH: slice i CENTER drawn at angle = rotAngle + i*sliceArc
+    Pointer at top = -PI/2 radians on canvas
+    Winner under pointer: rotAngle + winner*sliceArc = -PI/2
+    finalAngle = -PI/2 - winner*sliceArc - fullSpins*2*PI
+
+    ANIMATION: lerp(0 -> finalAngle) via easeOut(t)
+    Guarantees wheel lands EXACTLY on winner every time.
+  */
+  return new Promise(resolve => {
+    const winner    = Math.floor(Math.random() * items.length);
+    const n         = items.length;
+    const sliceArc  = (2 * Math.PI) / n;
+    const fullSpins = 8 + Math.floor(Math.random() * 5);
+
+    // Random offset within ±35% of slice so wheel doesn't always stop at dead center
+    // (safe: max offset is well within the slice boundary)
+    const offset = (Math.random() - 0.5) * sliceArc * 0.7;
+    const finalAngle = -Math.PI / 2 - winner * sliceArc - fullSpins * 2 * Math.PI + offset;
+
+    const wrap = document.getElementById(wrapId);
     wrap.classList.add('spinning');
-    document.getElementById('combined').style.display = 'none';
+    drawWheel(canvasId, items, 0);
 
-    // Pick winner
-    const winner   = Math.floor(Math.random() * items.length);
-    const n        = items.length;
-    const sliceArc = 2 * Math.PI / n;
-
-    // Target: winner slice center at top (pointer)
-    const targetAngle  = -(winner * sliceArc + sliceArc / 2);
-    const spins        = 8 + Math.random() * 4;
-    const finalAngle   = targetAngle - spins * 2 * Math.PI;
-    const startAngle   = s.angle;
-    const duration     = 3000;
-    const startTime    = performance.now();
-
-    function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
+    const startTime = performance.now();
 
     function animate(now) {
-      const elapsed = now - startTime;
-      const t       = Math.min(elapsed / duration, 1);
-      const current = startAngle + (finalAngle - startAngle) * easeOut(t);
-      s.angle = current;
-      drawWheel(id, items, current);
-
+      const t       = Math.min((now - startTime) / duration, 1);
+      const current = finalAngle * easeOut(t);
+      drawWheel(canvasId, items, current);
       if (t < 1) {
         requestAnimationFrame(animate);
       } else {
-        s.spinning = false;
-        s.result   = items[winner];
+        drawWheel(canvasId, items, finalAngle);
+        drawWinnerHighlight(canvasId, n, offset);
         wrap.classList.remove('spinning');
-
-        const fullName = FULL_NAMES[s.result.name] || s.result.name;
-        const icon     = s.result.icon ? s.result.icon + ' ' : '';
-        badge.textContent = icon + fullName;
-        badge.className   = 'result-badge has-result';
-
-        if (id === 'color') {
-          badge.style.cssText = `color:${s.result.arc};border-color:${s.result.arc}55;background:${s.result.fill};`;
-        } else {
-          badge.style.cssText = `color:#ffd166;border-color:rgba(255,209,102,.3);background:rgba(255,209,102,.07);`;
-        }
-
-        btn.disabled = false;
-        btn.innerHTML = id === 'color' ? '🎨 GIRAR COLOR' : '🦾 GIRAR EXTREMIDAD';
-
-        updateCombined();
+        resolve(items[winner]);
       }
     }
 
     requestAnimationFrame(animate);
-  }
+  });
+}
 
-  function updateCombined() {
-    const cr = state.color.result;
-    const lr = state.limb.result;
-    if (!cr || !lr) return;
 
-    const cEl = document.getElementById('combined-color');
-    const lEl = document.getElementById('combined-limb');
-    const el  = document.getElementById('combined');
+/* ─────────────────────────────────────────────
+   INITIAL RENDER
+───────────────────────────────────────────── */
+drawWheel('canvas-color', COLORS, 0);
+drawWheel('canvas-limb',  LIMBS,  0);
 
-    cEl.textContent  = cr.name;
-    cEl.style.cssText= `color:${cr.arc};text-shadow:0 0 16px ${cr.arc}66;`;
+/* ─────────────────────────────────────────────
+   SPIN BOTH
+───────────────────────────────────────────── */
+let spinning = false;
 
-    const fullLimb   = FULL_NAMES[lr.name] || lr.name;
-    lEl.textContent  = lr.icon + ' ' + fullLimb;
-    lEl.style.cssText= 'color:#ffd166;text-shadow:0 0 16px rgba(255,209,102,.4);';
+async function spinBoth() {
+  if (spinning) return;
+  spinning = true;
 
-    el.style.display = 'block';
-  }
+  const btn = document.getElementById('spin-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ GIRANDO...';
+
+  // Clear previous results
+  const badgeC = document.getElementById('badge-color');
+  const badgeL = document.getElementById('badge-limb');
+  badgeC.className = 'result-badge';
+  badgeC.textContent = '— — —';
+  badgeC.removeAttribute('style');
+  badgeL.className = 'result-badge';
+  badgeL.textContent = '— — —';
+  badgeL.removeAttribute('style');
+  document.getElementById('combined').style.display = 'none';
+
+  // Spin both wheels simultaneously, slightly different durations for visual variety
+  const [colorWinner, limbWinner] = await Promise.all([
+    spinWheel('canvas-color', 'wrap-color', COLORS, 3000),
+    spinWheel('canvas-limb',  'wrap-limb',  LIMBS,  3200),
+  ]);
+
+  // Show color result
+  badgeC.textContent = colorWinner.name;
+  badgeC.className   = 'result-badge active';
+  badgeC.style.cssText = `color:${colorWinner.arc};border-color:${colorWinner.arc}55;background:${colorWinner.fill};`;
+
+  // Show limb result
+  const fullLimb = FULL[limbWinner.name] || limbWinner.name;
+  badgeL.textContent = limbWinner.icon + ' ' + fullLimb;
+  badgeL.className   = 'result-badge active';
+  badgeL.style.cssText = 'color:#ffd166;border-color:rgba(255,209,102,.3);background:rgba(255,209,102,.07);';
+
+  // Combined
+  const cEl = document.getElementById('combined-color');
+  const lEl = document.getElementById('combined-limb');
+  cEl.textContent  = colorWinner.name;
+  cEl.style.cssText = `color:${colorWinner.arc};text-shadow:0 0 16px ${colorWinner.arc}66;`;
+  lEl.textContent  = limbWinner.icon + ' ' + fullLimb;
+  lEl.style.cssText = 'color:#ffd166;text-shadow:0 0 16px rgba(255,209,102,.4);';
+  document.getElementById('combined').style.display = 'block';
+
+  // Re-enable
+  spinning = false;
+  btn.disabled = false;
+  btn.textContent = '🎲 GIRAR AMBAS';
+}
 </script>
 </body>
 </html>
